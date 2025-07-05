@@ -1,0 +1,51 @@
+version: '3.8'
+
+networks:
+  monitoring:
+    driver: bridge
+
+services:
+  # Node Exporter (시스템 메트릭)
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - monitoring
+    restart: unless-stopped
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=9100"
+
+  # Promtail (로그 수집)
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: promtail
+    ports:
+      - "9080:9080"
+    volumes:
+      - ./config/promtail-config.yaml:/etc/promtail/config.yml
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command:
+      - "-config.file=/etc/promtail/config.yml"
+    networks:
+      - monitoring
+    restart: unless-stopped
+    environment:
+      - CENTRAL_LOKI_URL=${MONITORING_SERVER_IP:-localhost}:3100
+      - SERVICE_NAME=${SERVICE_NAME:-fastapi}
+      - HOSTNAME=${HOSTNAME:-$(hostname)}
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port=9080" 

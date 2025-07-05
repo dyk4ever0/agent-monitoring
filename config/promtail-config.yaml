@@ -1,0 +1,72 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://${CENTRAL_LOKI_URL}/loki/api/v1/push
+
+scrape_configs:
+  - job_name: varlogs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: varlogs
+          __path__: /var/log/utils_logs/coach_assistant.log
+      - targets:
+          - localhost
+        labels:
+          job: varlogs
+          __path__: /var/log/utils_logs/meal_record.log
+      - targets:
+          - localhost
+        labels:
+          job: varlogs
+          __path__: /var/log/utils_logs/app.log
+
+  # FastAPI 애플리케이션 로그 (실제 경로)
+  - job_name: fastapi
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: fastapi
+          service: ${SERVICE_NAME:-fastapi}
+          host: ${HOSTNAME:-unknown}
+          __path__: /var/log/fastapi/*.log
+
+  # Coach Assistant 서버 로그
+  - job_name: coach-assistant
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: coach-assistant
+          service: coach-assistant
+          host: ${HOSTNAME:-unknown}
+          __path__: /var/log/coach-assistant/*.log
+
+  # Predict 서버 로그
+  - job_name: predict-server
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: predict-server
+          service: predict-server
+          host: ${HOSTNAME:-unknown}
+          __path__: /var/log/predict-server/*.log
+
+  # Docker 컨테이너 로그
+  - job_name: docker
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: docker
+          service: ${SERVICE_NAME:-fastapi}
+          host: ${HOSTNAME:-unknown}
+          __path__: /var/lib/docker/containers/*/*-json.log 
